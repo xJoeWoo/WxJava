@@ -114,6 +114,9 @@ public class WxPayConstants {
 
       public abstract String getType();
 
+      private Specific() {
+      }
+
       public static Specific<WxPayNativeOrderResult> NATIVE =
         new Specific<WxPayNativeOrderResult>() {
           @Override
