@@ -7,6 +7,7 @@ import java.util.concurrent.locks.ReentrantLock;
 import cn.binarywang.wx.miniapp.config.WxMaConfig;
 import cn.binarywang.wx.miniapp.util.json.WxMaGsonBuilder;
 import me.chanjar.weixin.common.bean.WxAccessToken;
+import me.chanjar.weixin.common.util.ConfigUtils;
 import me.chanjar.weixin.common.util.http.apache.ApacheHttpClientBuilder;
 
 /**
@@ -48,19 +49,8 @@ public class WxMaDefaultConfigImpl implements WxMaConfig {
 
   private volatile ApacheHttpClientBuilder apacheHttpClientBuilder;
 
-  /**
-   * 会过期的数据提前过期时间，默认预留200秒的时间
-   */
-  protected long expiresAheadInMillis(int expiresInSeconds) {
-    return System.currentTimeMillis() + (expiresInSeconds - 200) * 1000L;
-  }
 
-  /**
-   * 判断 expiresTime 是否已经过期
-   */
-  protected boolean isExpired(long expiresTime) {
-    return System.currentTimeMillis() > expiresTime;
-  }
+
 
   @Override
   public String getAccessToken() {
@@ -82,7 +72,7 @@ public class WxMaDefaultConfigImpl implements WxMaConfig {
 
   @Override
   public boolean isAccessTokenExpired() {
-    return isExpired(this.expiresTime);
+    return ConfigUtils.isExpired(this.expiresTime);
   }
 
   @Override
@@ -93,7 +83,7 @@ public class WxMaDefaultConfigImpl implements WxMaConfig {
   @Override
   public synchronized void updateAccessToken(String accessToken, int expiresInSeconds) {
     setAccessToken(accessToken);
-    setExpiresTime(expiresAheadInMillis(expiresInSeconds));
+    setExpiresTime(ConfigUtils.expiresTimestamp(expiresInSeconds));
   }
 
   @Override
@@ -108,7 +98,7 @@ public class WxMaDefaultConfigImpl implements WxMaConfig {
 
   @Override
   public boolean isJsapiTicketExpired() {
-    return isExpired(this.jsapiTicketExpiresTime);
+    return ConfigUtils.isExpired(this.jsapiTicketExpiresTime);
   }
 
   @Override
@@ -119,7 +109,7 @@ public class WxMaDefaultConfigImpl implements WxMaConfig {
   @Override
   public void updateJsapiTicket(String jsapiTicket, int expiresInSeconds) {
     this.jsapiTicket = jsapiTicket;
-    this.jsapiTicketExpiresTime = expiresAheadInMillis(expiresInSeconds);
+    this.jsapiTicketExpiresTime = ConfigUtils.expiresTimestamp(expiresInSeconds);
   }
 
 
@@ -135,7 +125,7 @@ public class WxMaDefaultConfigImpl implements WxMaConfig {
 
   @Override
   public boolean isCardApiTicketExpired() {
-    return isExpired(this.cardApiTicketExpiresTime);
+    return ConfigUtils.isExpired(this.cardApiTicketExpiresTime);
   }
 
   @Override
@@ -146,7 +136,7 @@ public class WxMaDefaultConfigImpl implements WxMaConfig {
   @Override
   public void updateCardApiTicket(String cardApiTicket, int expiresInSeconds) {
     this.cardApiTicket = cardApiTicket;
-    this.cardApiTicketExpiresTime = expiresAheadInMillis(expiresInSeconds);
+    this.cardApiTicketExpiresTime = ConfigUtils.expiresTimestamp(expiresInSeconds);
   }
 
   @Override

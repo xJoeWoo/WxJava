@@ -16,14 +16,13 @@ public class WxOpenInRedissonConfigStorageTest {
   private WxOpenConfigStorage wxOpenConfigStorage;
 
   @BeforeClass
-  public void setWxOpenConfigStorage(){
+  public void setWxOpenConfigStorage() {
     Config config = new Config();
     config.useSingleServer().setAddress("redis://127.0.0.1:6379")
       .setDatabase(0);
     config.setTransportMode(TransportMode.NIO);
     RedissonClient redisson = Redisson.create(config);
-    this.wxOpenConfigStorage = new WxOpenInRedissonConfigStorage(redisson);
-    this.wxOpenConfigStorage.setWxOpenInfo("ComponentAppId", "ComponentAppSecret", "ComponentToken","ComponentAesKey");
+    this.wxOpenConfigStorage = new WxOpenInRedissonConfigStorage("ComponentAppId", "ComponentAppSecret", "ComponentToken", "ComponentAesKey", redisson);
     this.wxOpenConfigStorage.setComponentVerifyTicket("ComponentVerifyTicket");
   }
 

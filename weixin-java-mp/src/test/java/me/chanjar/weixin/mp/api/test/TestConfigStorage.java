@@ -15,6 +15,10 @@ public class TestConfigStorage extends WxMpDefaultConfigImpl {
   private String templateId;
   private String keyPath;
 
+  public TestConfigStorage() {
+    super(null, null, null, null);
+  }
+
   public String getKeyPath() {
     return keyPath;
   }

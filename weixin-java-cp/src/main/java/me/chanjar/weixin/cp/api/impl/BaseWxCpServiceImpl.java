@@ -53,21 +53,6 @@ public abstract class BaseWxCpServiceImpl<H, P> implements WxCpService, RequestH
   private WxCpTaskCardService taskCardService = new WxCpTaskCardServiceImpl(this);
   private WxCpExternalContactService externalContactService = new WxCpExternalContactServiceImpl(this);
 
-  /**
-   * 全局的是否正在刷新access token的锁.
-   */
-  protected final Object globalAccessTokenRefreshLock = new Object();
-
-  /**
-   * 全局的是否正在刷新jsapi_ticket的锁.
-   */
-  protected final Object globalJsapiTicketRefreshLock = new Object();
-
-  /**
-   * 全局的是否正在刷新agent的jsapi_ticket的锁.
-   */
-  protected final Object globalAgentJsapiTicketRefreshLock = new Object();
-
   protected WxCpConfigStorage configStorage;
 
   private WxSessionManager sessionManager = new StandardSessionManager();
@@ -107,13 +92,20 @@ public abstract class BaseWxCpServiceImpl<H, P> implements WxCpService, RequestH
     }
 
     if (this.configStorage.isAgentJsapiTicketExpired()) {
-      synchronized (this.globalAgentJsapiTicketRefreshLock) {
-        if (this.configStorage.isAgentJsapiTicketExpired()) {
+      try {
+        // Update token only if no other threads, servers were updating
+        if (configStorage.getAgentJsApiTicketLock().tryLock()) {
           String responseContent = this.get(this.configStorage.getApiUrl(GET_AGENT_CONFIG_TICKET), null);
           JsonObject jsonObject = new JsonParser().parse(responseContent).getAsJsonObject();
           this.configStorage.updateAgentJsapiTicket(jsonObject.get("ticket").getAsString(),
             jsonObject.get("expires_in").getAsInt());
+
+        } else {
+          // Wait until other process finish updating
+          configStorage.getAgentJsApiTicketLock().lock();
         }
+      } finally {
+        configStorage.getAgentJsApiTicketLock().unlock();
       }
     }
 
@@ -132,13 +124,17 @@ public abstract class BaseWxCpServiceImpl<H, P> implements WxCpService, RequestH
     }
 
     if (this.configStorage.isJsapiTicketExpired()) {
-      synchronized (this.globalJsapiTicketRefreshLock) {
-        if (this.configStorage.isJsapiTicketExpired()) {
+      try {
+        if (configStorage.getJsApiTicketLock().tryLock()) {
           String responseContent = this.get(this.configStorage.getApiUrl(GET_JSAPI_TICKET), null);
           JsonObject tmpJsonObject = new JsonParser().parse(responseContent).getAsJsonObject();
           this.configStorage.updateJsapiTicket(tmpJsonObject.get("ticket").getAsString(),
             tmpJsonObject.get("expires_in").getAsInt());
+        } else {
+          configStorage.getJsApiTicketLock().lock();
         }
+      } finally {
+        configStorage.getJsApiTicketLock().unlock();
       }
     }
 

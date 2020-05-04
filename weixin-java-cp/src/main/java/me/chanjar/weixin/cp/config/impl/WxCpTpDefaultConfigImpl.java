@@ -1,6 +1,7 @@
 package me.chanjar.weixin.cp.config.impl;
 
 import me.chanjar.weixin.common.bean.WxAccessToken;
+import me.chanjar.weixin.common.util.ConfigUtils;
 import me.chanjar.weixin.common.util.http.apache.ApacheHttpClientBuilder;
 import me.chanjar.weixin.cp.config.WxCpTpConfigStorage;
 import me.chanjar.weixin.cp.util.json.WxCpGsonBuilder;
@@ -67,7 +68,7 @@ public class WxCpTpDefaultConfigImpl implements WxCpTpConfigStorage, Serializabl
 
   @Override
   public boolean isSuiteAccessTokenExpired() {
-    return System.currentTimeMillis() > this.expiresTime;
+    return ConfigUtils.isExpired(this.expiresTime);
   }
 
   @Override
@@ -83,7 +84,7 @@ public class WxCpTpDefaultConfigImpl implements WxCpTpConfigStorage, Serializabl
   @Override
   public synchronized void updateSuiteAccessToken(String suiteAccessToken, int expiresInSeconds) {
     this.suiteAccessToken = suiteAccessToken;
-    this.expiresTime = System.currentTimeMillis() + (expiresInSeconds - 200) * 1000L;
+    this.expiresTime = ConfigUtils.expiresTimestamp(expiresInSeconds);
   }
 
   @Override
@@ -123,14 +124,13 @@ public class WxCpTpDefaultConfigImpl implements WxCpTpConfigStorage, Serializabl
 
   @Override
   public boolean isSuiteTicketExpired() {
-    return System.currentTimeMillis() > this.suiteTicketExpiresTime;
+    return ConfigUtils.isExpired(suiteTicketExpiresTime);
   }
 
   @Override
   public synchronized void updateSuiteTicket(String suiteTicket, int expiresInSeconds) {
     this.suiteTicket = suiteTicket;
-    // 预留200秒的时间
-    this.suiteTicketExpiresTime = System.currentTimeMillis() + (expiresInSeconds - 200) * 1000L;
+    this.suiteTicketExpiresTime = ConfigUtils.expiresTimestamp(expiresInSeconds);
   }
 
   @Override

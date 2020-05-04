@@ -111,14 +111,23 @@ public class WxOpenComponentServiceImpl implements WxOpenComponentService {
   public String getComponentAccessToken(boolean forceRefresh) throws WxErrorException {
 
     if (this.getWxOpenConfigStorage().isComponentAccessTokenExpired() || forceRefresh) {
-      JsonObject jsonObject = new JsonObject();
-      jsonObject.addProperty("component_appid", getWxOpenConfigStorage().getComponentAppId());
-      jsonObject.addProperty("component_appsecret", getWxOpenConfigStorage().getComponentAppSecret());
-      jsonObject.addProperty("component_verify_ticket", getWxOpenConfigStorage().getComponentVerifyTicket());
+      if (getWxOpenConfigStorage().getComponentAccessTokenLock().tryLock()) {
+        try {
+          JsonObject jsonObject = new JsonObject();
+          jsonObject.addProperty("component_appid", getWxOpenConfigStorage().getComponentAppId());
+          jsonObject.addProperty("component_appsecret", getWxOpenConfigStorage().getComponentAppSecret());
+          jsonObject.addProperty("component_verify_ticket", getWxOpenConfigStorage().getComponentVerifyTicket());
 
-      String responseContent = this.getWxOpenService().post(API_COMPONENT_TOKEN_URL, jsonObject.toString());
-      WxOpenComponentAccessToken componentAccessToken = WxOpenComponentAccessToken.fromJson(responseContent);
-      getWxOpenConfigStorage().updateComponentAccessToken(componentAccessToken);
+          String responseContent = this.getWxOpenService().post(API_COMPONENT_TOKEN_URL, jsonObject.toString());
+          WxOpenComponentAccessToken componentAccessToken = WxOpenComponentAccessToken.fromJson(responseContent);
+          getWxOpenConfigStorage().updateComponentAccessToken(componentAccessToken);
+        } finally {
+          getWxOpenConfigStorage().getComponentAccessTokenLock().unlock();
+        }
+      } else {
+        getWxOpenConfigStorage().getComponentAccessTokenLock().lock();
+        getWxOpenConfigStorage().getComponentAccessTokenLock().unlock();
+      }
     }
     return this.getWxOpenConfigStorage().getComponentAccessToken();
   }

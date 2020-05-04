@@ -6,6 +6,8 @@ import me.chanjar.weixin.mp.config.WxMpConfigStorage;
 import me.chanjar.weixin.open.bean.WxOpenAuthorizerAccessToken;
 import me.chanjar.weixin.open.bean.WxOpenComponentAccessToken;
 
+import java.util.concurrent.locks.Lock;
+
 /**
  * @author <a href="https://github.com/007gzs">007</a>
  */
@@ -13,19 +15,11 @@ public interface WxOpenConfigStorage {
 
   String getComponentAppId();
 
-  void setComponentAppId(String componentAppId);
-
   String getComponentAppSecret();
-
-  void setComponentAppSecret(String componentAppSecret);
 
   String getComponentToken();
 
-  void setComponentToken(String componentToken);
-
   String getComponentAesKey();
-
-  void setComponentAesKey(String componentAesKey);
 
   String getComponentVerifyTicket();
 
@@ -38,6 +32,8 @@ public interface WxOpenConfigStorage {
   void expireComponentAccessToken();
 
   void updateComponentAccessToken(WxOpenComponentAccessToken componentAccessToken);
+
+  Lock getComponentAccessTokenLock();
 
   String getHttpProxyHost();
 
@@ -129,12 +125,4 @@ public interface WxOpenConfigStorage {
    */
   void updateCardApiTicket(String appId, String cardApiTicket, int expiresInSeconds);
 
-  /**
-   * 设置第三方平台基础信息
-   * @param componentAppId 第三方平台 appid
-   * @param componentAppSecret 第三方平台 appsecret
-   * @param componentToken 消息校验Token
-   * @param componentAesKey 消息加解密Key
-   */
-  void setWxOpenInfo(String componentAppId, String componentAppSecret, String componentToken, String componentAesKey);
 }

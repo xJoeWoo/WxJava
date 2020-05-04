@@ -1,10 +1,6 @@
 package me.chanjar.weixin.cp.api.impl;
 
-import jodd.http.HttpConnectionProvider;
-import jodd.http.HttpRequest;
-import jodd.http.HttpResponse;
-import jodd.http.JoddHttp;
-import jodd.http.ProxyInfo;
+import jodd.http.*;
 import me.chanjar.weixin.common.WxType;
 import me.chanjar.weixin.common.bean.WxAccessToken;
 import me.chanjar.weixin.common.error.WxError;
@@ -41,22 +37,29 @@ public class WxCpServiceJoddHttpImpl extends BaseWxCpServiceImpl<HttpConnectionP
       return this.configStorage.getAccessToken();
     }
 
-    synchronized (this.globalAccessTokenRefreshLock) {
-      HttpRequest request = HttpRequest.get(String.format(this.configStorage.getApiUrl(WxCpApiPathConsts.GET_TOKEN),
-        this.configStorage.getCorpId(), this.configStorage.getCorpSecret()));
-      if (this.httpProxy != null) {
-        httpClient.useProxy(this.httpProxy);
-      }
-      request.withConnectionProvider(httpClient);
-      HttpResponse response = request.send();
+    if (configStorage.getAccessTokenLock().tryLock()) {
+      try {
+        HttpRequest request = HttpRequest.get(String.format(this.configStorage.getApiUrl(WxCpApiPathConsts.GET_TOKEN),
+          this.configStorage.getCorpId(), this.configStorage.getCorpSecret()));
+        if (this.httpProxy != null) {
+          httpClient.useProxy(this.httpProxy);
+        }
+        request.withConnectionProvider(httpClient);
+        HttpResponse response = request.send();
 
-      String resultContent = response.bodyText();
-      WxError error = WxError.fromJson(resultContent, WxType.CP);
-      if (error.getErrorCode() != 0) {
-        throw new WxErrorException(error);
+        String resultContent = response.bodyText();
+        WxError error = WxError.fromJson(resultContent, WxType.CP);
+        if (error.getErrorCode() != 0) {
+          throw new WxErrorException(error);
+        }
+        WxAccessToken accessToken = WxAccessToken.fromJson(resultContent);
+        this.configStorage.updateAccessToken(accessToken.getAccessToken(), accessToken.getExpiresIn());
+      } finally {
+        configStorage.getAccessTokenLock().unlock();
       }
-      WxAccessToken accessToken = WxAccessToken.fromJson(resultContent);
-      this.configStorage.updateAccessToken(accessToken.getAccessToken(), accessToken.getExpiresIn());
+    } else {
+      configStorage.getAccessTokenLock().lock();
+      configStorage.getAccessTokenLock().unlock();
     }
     return this.configStorage.getAccessToken();
   }

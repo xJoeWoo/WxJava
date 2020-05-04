@@ -4,6 +4,7 @@ package me.chanjar.weixin.open.api.impl;
 import cn.binarywang.wx.miniapp.config.WxMaConfig;
 import lombok.Data;
 import me.chanjar.weixin.common.bean.WxAccessToken;
+import me.chanjar.weixin.common.util.ConfigUtils;
 import me.chanjar.weixin.common.util.http.apache.ApacheHttpClientBuilder;
 import me.chanjar.weixin.mp.bean.WxMpHostConfig;
 import me.chanjar.weixin.mp.config.WxMpConfigStorage;
@@ -26,10 +27,11 @@ import java.util.concurrent.locks.ReentrantLock;
  */
 @Data
 public class WxOpenInMemoryConfigStorage implements WxOpenConfigStorage {
-  private String componentAppId;
-  private String componentAppSecret;
-  private String componentToken;
-  private String componentAesKey;
+
+  private final String componentAppId;
+  private final String componentAppSecret;
+  private final String componentToken;
+  private final String componentAesKey;
   private String componentVerifyTicket;
   private String componentAccessToken;
   private long componentExpiresTime;
@@ -45,11 +47,18 @@ public class WxOpenInMemoryConfigStorage implements WxOpenConfigStorage {
   private Map<String, Token> jsapiTickets = new ConcurrentHashMap<>();
   private Map<String, Token> cardApiTickets = new ConcurrentHashMap<>();
 
+  private final Lock componentAccessTokenLock = new ReentrantLock();
 
+  public WxOpenInMemoryConfigStorage(String componentAppId, String componentAppSecret, String componentToken, String componentAesKey) {
+    this.componentAppId = componentAppId;
+    this.componentAppSecret = componentAppSecret;
+    this.componentToken = componentToken;
+    this.componentAesKey = componentAesKey;
+  }
 
   @Override
   public boolean isComponentAccessTokenExpired() {
-    return System.currentTimeMillis() > componentExpiresTime;
+    return ConfigUtils.isExpired(componentExpiresTime);
   }
 
   @Override
@@ -75,15 +84,7 @@ public class WxOpenInMemoryConfigStorage implements WxOpenConfigStorage {
   @Override
   public void updateComponentAccessToken(String componentAccessToken, int expiresInSeconds) {
     this.componentAccessToken = componentAccessToken;
-    this.componentExpiresTime = System.currentTimeMillis() + (expiresInSeconds - 200) * 1000L;
-  }
-
-  @Override
-  public void setWxOpenInfo(String componentAppId, String componentAppSecret, String componentToken, String componentAesKey) {
-    setComponentAppId(componentAppId);
-    setComponentAppSecret(componentAppSecret);
-    setComponentToken(componentToken);
-    setComponentAesKey(componentAesKey);
+    this.componentExpiresTime = ConfigUtils.expiresTimestamp(expiresInSeconds);
   }
 
   @Override
@@ -93,7 +94,7 @@ public class WxOpenInMemoryConfigStorage implements WxOpenConfigStorage {
 
   private String getTokenString(Map<String, Token> map, String key) {
     Token token = map.get(key);
-    if (token == null || (token.expiresTime != null && System.currentTimeMillis() > token.expiresTime)) {
+    if (token == null || (token.expiresTime != null && ConfigUtils.isExpired(token.expiresTime))) {
       return null;
     }
     return token.token;
@@ -114,7 +115,7 @@ public class WxOpenInMemoryConfigStorage implements WxOpenConfigStorage {
     }
     token.token = tokenString;
     if (expiresInSeconds != null) {
-      token.expiresTime = System.currentTimeMillis() + (expiresInSeconds - 200) * 1000L;
+      token.expiresTime = ConfigUtils.expiresTimestamp(expiresInSeconds);
     }
   }
 
@@ -199,14 +200,14 @@ public class WxOpenInMemoryConfigStorage implements WxOpenConfigStorage {
     private Long expiresTime;
   }
 
-  private static class WxOpenInnerConfigStorage implements WxMpConfigStorage, WxMaConfig {
+  static class WxOpenInnerConfigStorage implements WxMpConfigStorage, WxMaConfig {
     private WxOpenConfigStorage wxOpenConfigStorage;
     private String appId;
     private Lock accessTokenLock = new ReentrantLock();
     private Lock jsapiTicketLock = new ReentrantLock();
     private Lock cardApiTicketLock = new ReentrantLock();
 
-    private WxOpenInnerConfigStorage(WxOpenConfigStorage wxOpenConfigStorage, String appId) {
+    WxOpenInnerConfigStorage(WxOpenConfigStorage wxOpenConfigStorage, String appId) {
       this.wxOpenConfigStorage = wxOpenConfigStorage;
       this.appId = appId;
     }
@@ -256,10 +257,10 @@ public class WxOpenInMemoryConfigStorage implements WxOpenConfigStorage {
     public Lock getTicketLock(TicketType type) {
       switch (type) {
         case JSAPI: {
-          return this.jsapiTicketLock;
+          return getJsapiTicketLock();
         }
         case WX_CARD: {
-          return this.cardApiTicketLock;
+          return getCardApiTicketLock();
         }
         default: {
           // do nothing

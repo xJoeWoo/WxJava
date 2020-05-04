@@ -15,6 +15,10 @@ import me.chanjar.weixin.mp.config.impl.WxMpDefaultConfigImpl;
 class WxMpDemoInMemoryConfigStorage extends WxMpDefaultConfigImpl {
   private static final long serialVersionUID = -3706236839197109704L;
 
+  public WxMpDemoInMemoryConfigStorage() {
+    super(null, null, null, null);
+  }
+
   public static WxMpDemoInMemoryConfigStorage fromXml(InputStream is) {
     XStream xstream = XStreamInitializer.getInstance();
     xstream.processAnnotations(WxMpDemoInMemoryConfigStorage.class);

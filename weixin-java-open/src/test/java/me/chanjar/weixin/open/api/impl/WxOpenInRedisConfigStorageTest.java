@@ -16,15 +16,14 @@ public class WxOpenInRedisConfigStorageTest {
   private JedisPool pool;
 
   @BeforeClass
-  public void setWxOpenConfigStorage(){
+  public void setWxOpenConfigStorage() {
     pool = new JedisPool("127.0.0.1", 6379);
-    this.wxOpenConfigStorage = new WxOpenInRedisConfigStorage(pool);
-    this.wxOpenConfigStorage.setWxOpenInfo("ComponentAppId", "ComponentAppSecret", "ComponentToken","ComponentAesKey");
+    this.wxOpenConfigStorage = new WxOpenInRedisConfigStorage(pool, "ComponentAppId", "ComponentAppSecret", "ComponentToken", "ComponentAesKey");
     this.wxOpenConfigStorage.setComponentVerifyTicket("ComponentVerifyTicket");
   }
 
   @AfterClass
-  public void clearResource(){
+  public void clearResource() {
     pool.close();
   }
 

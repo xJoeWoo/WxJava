@@ -47,10 +47,9 @@ public class WxCpServiceApacheHttpClientImpl extends BaseWxCpServiceImpl<Closeab
       return this.configStorage.getAccessToken();
     }
 
-    synchronized (this.globalAccessTokenRefreshLock) {
-      String url = String.format(this.configStorage.getApiUrl(WxCpApiPathConsts.GET_TOKEN), this.configStorage.getCorpId(), this.configStorage.getCorpSecret());
-
+    if (configStorage.getAccessTokenLock().tryLock()) {
       try {
+        String url = String.format(this.configStorage.getApiUrl(WxCpApiPathConsts.GET_TOKEN), this.configStorage.getCorpId(), this.configStorage.getCorpSecret());
         HttpGet httpGet = new HttpGet(url);
         if (this.httpProxy != null) {
           RequestConfig config = RequestConfig.custom()
@@ -73,8 +72,14 @@ public class WxCpServiceApacheHttpClientImpl extends BaseWxCpServiceImpl<Closeab
         this.configStorage.updateAccessToken(accessToken.getAccessToken(), accessToken.getExpiresIn());
       } catch (IOException e) {
         throw new RuntimeException(e);
+      } finally {
+        configStorage.getAccessTokenLock().unlock();
       }
+    } else {
+      configStorage.getAccessTokenLock().lock();
+      configStorage.getAccessTokenLock().unlock();
     }
+
     return this.configStorage.getAccessToken();
   }
 

@@ -16,9 +16,11 @@ import java.io.File;
  *    比如为减少项目依赖，未加入redis分布式锁的实现，如有需要请自行实现。
  * </pre>
  *
+ * @deprecated 未实现分布式锁，建议使用 <code>WxCpRedissonConfigImpl</code>
  * @author gaigeshen
  */
-public class WxCpRedisConfigImpl implements WxCpConfigStorage {
+@Deprecated
+public class WxCpRedisConfigImpl extends WxCpDefaultConfigImpl {
   private static final String ACCESS_TOKEN_KEY = "WX_CP_ACCESS_TOKEN";
   private static final String ACCESS_TOKEN_EXPIRES_TIME_KEY = "WX_CP_ACCESS_TOKEN_EXPIRES_TIME";
   private static final String JS_API_TICKET_KEY = "WX_CP_JS_API_TICKET";
@@ -27,52 +29,10 @@ public class WxCpRedisConfigImpl implements WxCpConfigStorage {
   private static final String AGENT_JSAPI_TICKET_EXPIRES_TIME_KEY = "WX_CP_AGENT_%s_JSAPI_TICKET_EXPIRES_TIME";
 
   private final JedisPool jedisPool;
-  private volatile String corpId;
-  private volatile String corpSecret;
-  private volatile String token;
-  private volatile String aesKey;
-  private volatile Integer agentId;
-  private volatile String oauth2redirectUri;
-  private volatile String httpProxyHost;
-  private volatile int httpProxyPort;
-  private volatile String httpProxyUsername;
-  private volatile String httpProxyPassword;
-  private volatile File tmpDirFile;
-  private volatile ApacheHttpClientBuilder apacheHttpClientBuilder;
 
-  protected volatile String baseApiUrl;
-
-  @Override
-  public void setBaseApiUrl(String baseUrl) {
-    this.baseApiUrl = baseUrl;
-  }
-
-  @Override
-  public String getApiUrl(String path) {
-    if (baseApiUrl == null) {
-      baseApiUrl = WxCpApiPathConsts.DEFAULT_CP_BASE_URL;
-    }
-    return baseApiUrl + path;
-  }
-
-  public WxCpRedisConfigImpl(JedisPool jedisPool) {
+  public WxCpRedisConfigImpl(String corpId, String corpSecret, String token, String aesKey, Integer agentId, JedisPool jedisPool) {
+    super(corpId, corpSecret, token, aesKey, agentId);
     this.jedisPool = jedisPool;
-  }
-
-  public WxCpRedisConfigImpl(String host, int port) {
-    jedisPool = new JedisPool(host, port);
-  }
-
-  public WxCpRedisConfigImpl(JedisPoolConfig poolConfig, String host, int port) {
-    jedisPool = new JedisPool(poolConfig, host, port);
-  }
-
-  public WxCpRedisConfigImpl(JedisPoolConfig poolConfig, String host, int port, int timeout, String password) {
-    jedisPool = new JedisPool(poolConfig, host, port, timeout, password);
-  }
-
-  public WxCpRedisConfigImpl(JedisPoolConfig poolConfig, String host, int port, int timeout, String password, int database) {
-    jedisPool = new JedisPool(poolConfig, host, port, timeout, password, database);
   }
 
   /**
@@ -201,51 +161,6 @@ public class WxCpRedisConfigImpl implements WxCpConfigStorage {
   }
 
   @Override
-  public String getCorpId() {
-    return this.corpId;
-  }
-
-  public void setCorpId(String corpId) {
-    this.corpId = corpId;
-  }
-
-  @Override
-  public String getCorpSecret() {
-    return this.corpSecret;
-  }
-
-  public void setCorpSecret(String corpSecret) {
-    this.corpSecret = corpSecret;
-  }
-
-  @Override
-  public Integer getAgentId() {
-    return this.agentId;
-  }
-
-  public void setAgentId(Integer agentId) {
-    this.agentId = agentId;
-  }
-
-  @Override
-  public String getToken() {
-    return this.token;
-  }
-
-  public void setToken(String token) {
-    this.token = token;
-  }
-
-  @Override
-  public String getAesKey() {
-    return this.aesKey;
-  }
-
-  public void setAesKey(String aesKey) {
-    this.aesKey = aesKey;
-  }
-
-  @Override
   public long getExpiresTime() {
     try (Jedis jedis = this.jedisPool.getResource()) {
       String expiresTimeStr = jedis.get(ACCESS_TOKEN_EXPIRES_TIME_KEY);
@@ -260,73 +175,8 @@ public class WxCpRedisConfigImpl implements WxCpConfigStorage {
   }
 
   @Override
-  public String getOauth2redirectUri() {
-    return this.oauth2redirectUri;
-  }
-
-  public void setOauth2redirectUri(String oauth2redirectUri) {
-    this.oauth2redirectUri = oauth2redirectUri;
-  }
-
-  @Override
-  public String getHttpProxyHost() {
-    return this.httpProxyHost;
-  }
-
-  public void setHttpProxyHost(String httpProxyHost) {
-    this.httpProxyHost = httpProxyHost;
-  }
-
-  @Override
-  public int getHttpProxyPort() {
-    return this.httpProxyPort;
-  }
-
-  public void setHttpProxyPort(int httpProxyPort) {
-    this.httpProxyPort = httpProxyPort;
-  }
-
-  @Override
-  public String getHttpProxyUsername() {
-    return this.httpProxyUsername;
-  }
-
-  // ============================ Setters below
-
-  public void setHttpProxyUsername(String httpProxyUsername) {
-    this.httpProxyUsername = httpProxyUsername;
-  }
-
-  @Override
-  public String getHttpProxyPassword() {
-    return this.httpProxyPassword;
-  }
-
-  public void setHttpProxyPassword(String httpProxyPassword) {
-    this.httpProxyPassword = httpProxyPassword;
-  }
-
-  @Override
-  public File getTmpDirFile() {
-    return this.tmpDirFile;
-  }
-
-  public void setTmpDirFile(File tmpDirFile) {
-    this.tmpDirFile = tmpDirFile;
-  }
-
-  @Override
-  public ApacheHttpClientBuilder getApacheHttpClientBuilder() {
-    return this.apacheHttpClientBuilder;
-  }
-
-  @Override
   public boolean autoRefreshToken() {
     return true;
-  }
-
-  public void setApacheHttpClientBuilder(ApacheHttpClientBuilder apacheHttpClientBuilder) {
-    this.apacheHttpClientBuilder = apacheHttpClientBuilder;
   }
 
 }

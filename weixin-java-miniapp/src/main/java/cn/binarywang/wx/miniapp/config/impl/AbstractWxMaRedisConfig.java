@@ -1,6 +1,7 @@
 package cn.binarywang.wx.miniapp.config.impl;
 
 import com.github.jedis.lock.JedisLock;
+import me.chanjar.weixin.common.util.ConfigUtils;
 import redis.clients.jedis.Jedis;
 
 import java.io.File;
@@ -12,7 +13,9 @@ import java.util.concurrent.locks.Lock;
 
 /**
  * @author <a href="https://github.com/winter4666">winter</a>
+ * @deprecated 分布式锁实现库已不再维护，建议使用 <code>WxMaRedissonConfig</code>
  */
+@Deprecated
 public abstract class AbstractWxMaRedisConfig extends WxMaDefaultConfigImpl {
 
   public interface JedisConfig {
@@ -129,12 +132,12 @@ public abstract class AbstractWxMaRedisConfig extends WxMaDefaultConfigImpl {
 
   @Override
   public boolean isAccessTokenExpired() {
-    return isExpired(getExpireFromRedis(ACCESS_TOKEN));
+    return ConfigUtils.isExpired(getExpireFromRedis(ACCESS_TOKEN));
   }
 
   @Override
   public synchronized void updateAccessToken(String accessToken, int expiresInSeconds) {
-    setValueToRedis(ACCESS_TOKEN, expiresAheadInMillis(expiresInSeconds), accessToken);
+    setValueToRedis(ACCESS_TOKEN, ConfigUtils.expiresTimestamp(expiresInSeconds), accessToken);
   }
 
   @Override
@@ -156,7 +159,7 @@ public abstract class AbstractWxMaRedisConfig extends WxMaDefaultConfigImpl {
 
   @Override
   public boolean isJsapiTicketExpired() {
-    return isExpired(getExpireFromRedis(JSAPI_TICKET));
+    return ConfigUtils.isExpired(getExpireFromRedis(JSAPI_TICKET));
   }
 
   @Override
@@ -166,7 +169,7 @@ public abstract class AbstractWxMaRedisConfig extends WxMaDefaultConfigImpl {
 
   @Override
   public void updateJsapiTicket(String jsapiTicket, int expiresInSeconds) {
-    setValueToRedis(JSAPI_TICKET, expiresAheadInMillis(expiresInSeconds), jsapiTicket);
+    setValueToRedis(JSAPI_TICKET, ConfigUtils.expiresTimestamp(expiresInSeconds), jsapiTicket);
   }
 
 
@@ -189,7 +192,7 @@ public abstract class AbstractWxMaRedisConfig extends WxMaDefaultConfigImpl {
 
   @Override
   public boolean isCardApiTicketExpired() {
-    return isExpired(getExpireFromRedis(CARD_API_TICKET));
+    return ConfigUtils.isExpired(getExpireFromRedis(CARD_API_TICKET));
   }
 
   @Override
@@ -199,7 +202,7 @@ public abstract class AbstractWxMaRedisConfig extends WxMaDefaultConfigImpl {
 
   @Override
   public void updateCardApiTicket(String cardApiTicket, int expiresInSeconds) {
-    setValueToRedis(CARD_API_TICKET, expiresAheadInMillis(expiresInSeconds), cardApiTicket);
+    setValueToRedis(CARD_API_TICKET, ConfigUtils.expiresTimestamp(expiresInSeconds), cardApiTicket);
   }
 
   @Override

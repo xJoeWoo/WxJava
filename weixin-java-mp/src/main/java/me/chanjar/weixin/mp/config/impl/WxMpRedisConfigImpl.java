@@ -12,9 +12,12 @@ import redis.clients.jedis.JedisPool;
  *    比如为减少项目依赖，未加入redis分布式锁的实现，如有需要请自行实现。
  * </pre>
  *
+ * @deprecated 分布式锁未实现，建议使用 <code>WxMpRedissonConfigImpl</code>
+ *
  * @author nickwong
  */
 @SuppressWarnings("hiding")
+@Deprecated
 public class WxMpRedisConfigImpl extends WxMpDefaultConfigImpl {
   private static final String ACCESS_TOKEN_KEY = "wx:access_token:";
 
@@ -25,16 +28,10 @@ public class WxMpRedisConfigImpl extends WxMpDefaultConfigImpl {
 
   private String accessTokenKey;
 
-  public WxMpRedisConfigImpl(JedisPool jedisPool) {
-    this.jedisPool = jedisPool;
-  }
 
-  /**
-   * 每个公众号生成独有的存储key.
-   */
-  @Override
-  public void setAppId(String appId) {
-    super.setAppId(appId);
+  public WxMpRedisConfigImpl(JedisPool jedisPool, String appId, String secret, String token, String aesKey) {
+    super(appId, secret, token, aesKey);
+    this.jedisPool = jedisPool;
     this.accessTokenKey = ACCESS_TOKEN_KEY.concat(appId);
   }
 

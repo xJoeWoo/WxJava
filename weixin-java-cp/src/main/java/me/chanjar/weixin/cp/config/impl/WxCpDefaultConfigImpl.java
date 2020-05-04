@@ -1,6 +1,7 @@
 package me.chanjar.weixin.cp.config.impl;
 
 import me.chanjar.weixin.common.bean.WxAccessToken;
+import me.chanjar.weixin.common.util.ConfigUtils;
 import me.chanjar.weixin.common.util.http.apache.ApacheHttpClientBuilder;
 import me.chanjar.weixin.cp.config.WxCpConfigStorage;
 import me.chanjar.weixin.cp.constant.WxCpApiPathConsts;
@@ -8,6 +9,8 @@ import me.chanjar.weixin.cp.util.json.WxCpGsonBuilder;
 
 import java.io.File;
 import java.io.Serializable;
+import java.util.concurrent.locks.Lock;
+import java.util.concurrent.locks.ReentrantLock;
 
 /**
  * 基于内存的微信配置provider，在实际生产环境中应该将这些配置持久化.
@@ -17,13 +20,13 @@ import java.io.Serializable;
 public class WxCpDefaultConfigImpl implements WxCpConfigStorage, Serializable {
   private static final long serialVersionUID = 1154541446729462780L;
 
-  private volatile String corpId;
-  private volatile String corpSecret;
+  private final String corpId;
+  private final String corpSecret;
 
-  private volatile String token;
+  private final String token;
   protected volatile String accessToken;
-  private volatile String aesKey;
-  protected volatile Integer agentId;
+  private final String aesKey;
+  protected final Integer agentId;
   private volatile long expiresTime;
 
   private volatile String oauth2redirectUri;
@@ -44,6 +47,18 @@ public class WxCpDefaultConfigImpl implements WxCpConfigStorage, Serializable {
   private volatile ApacheHttpClientBuilder apacheHttpClientBuilder;
 
   private volatile String baseApiUrl;
+
+  private final Lock accessTokenLock = new ReentrantLock();
+  private final Lock jsApiTicketLock = new ReentrantLock();
+  private final Lock agentJsApiTicketLock = new ReentrantLock();
+
+  public WxCpDefaultConfigImpl(String corpId, String corpSecret, String token, String aesKey, Integer agentId) {
+    this.corpId = corpId;
+    this.corpSecret = corpSecret;
+    this.token = token;
+    this.aesKey = aesKey;
+    this.agentId = agentId;
+  }
 
   @Override
   public void setBaseApiUrl(String baseUrl) {
@@ -69,7 +84,7 @@ public class WxCpDefaultConfigImpl implements WxCpConfigStorage, Serializable {
 
   @Override
   public boolean isAccessTokenExpired() {
-    return System.currentTimeMillis() > this.expiresTime;
+    return ConfigUtils.isExpired(expiresTime);
   }
 
   @Override
@@ -85,7 +100,12 @@ public class WxCpDefaultConfigImpl implements WxCpConfigStorage, Serializable {
   @Override
   public synchronized void updateAccessToken(String accessToken, int expiresInSeconds) {
     this.accessToken = accessToken;
-    this.expiresTime = System.currentTimeMillis() + (expiresInSeconds - 200) * 1000L;
+    this.expiresTime = ConfigUtils.expiresTimestamp(expiresInSeconds);
+  }
+
+  @Override
+  public Lock getAccessTokenLock() {
+    return accessTokenLock;
   }
 
   @Override
@@ -107,14 +127,18 @@ public class WxCpDefaultConfigImpl implements WxCpConfigStorage, Serializable {
 
   @Override
   public boolean isJsapiTicketExpired() {
-    return System.currentTimeMillis() > this.jsapiTicketExpiresTime;
+    return ConfigUtils.isExpired(jsapiTicketExpiresTime);
   }
 
   @Override
   public synchronized void updateJsapiTicket(String jsapiTicket, int expiresInSeconds) {
     this.jsapiTicket = jsapiTicket;
-    // 预留200秒的时间
-    this.jsapiTicketExpiresTime = System.currentTimeMillis() + (expiresInSeconds - 200) * 1000L;
+    this.jsapiTicketExpiresTime = ConfigUtils.expiresTimestamp(expiresInSeconds);
+  }
+
+  @Override
+  public Lock getJsApiTicketLock() {
+    return jsApiTicketLock;
   }
 
   @Override
@@ -124,7 +148,7 @@ public class WxCpDefaultConfigImpl implements WxCpConfigStorage, Serializable {
 
   @Override
   public boolean isAgentJsapiTicketExpired() {
-    return System.currentTimeMillis() > this.agentJsapiTicketExpiresTime;
+    return ConfigUtils.isExpired(agentJsapiTicketExpiresTime);
   }
 
   @Override
@@ -136,7 +160,7 @@ public class WxCpDefaultConfigImpl implements WxCpConfigStorage, Serializable {
   public void updateAgentJsapiTicket(String jsapiTicket, int expiresInSeconds) {
     this.agentJsapiTicket = jsapiTicket;
     // 预留200秒的时间
-    this.agentJsapiTicketExpiresTime = System.currentTimeMillis() + (expiresInSeconds - 200) * 1000L;
+    this.agentJsapiTicketExpiresTime = ConfigUtils.expiresTimestamp(expiresInSeconds);
   }
 
   @Override
@@ -145,12 +169,13 @@ public class WxCpDefaultConfigImpl implements WxCpConfigStorage, Serializable {
   }
 
   @Override
-  public String getCorpId() {
-    return this.corpId;
+  public Lock getAgentJsApiTicketLock() {
+    return agentJsApiTicketLock;
   }
 
-  public void setCorpId(String corpId) {
-    this.corpId = corpId;
+  @Override
+  public String getCorpId() {
+    return this.corpId;
   }
 
   @Override
@@ -158,17 +183,9 @@ public class WxCpDefaultConfigImpl implements WxCpConfigStorage, Serializable {
     return this.corpSecret;
   }
 
-  public void setCorpSecret(String corpSecret) {
-    this.corpSecret = corpSecret;
-  }
-
   @Override
   public String getToken() {
     return this.token;
-  }
-
-  public void setToken(String token) {
-    this.token = token;
   }
 
   @Override
@@ -185,17 +202,9 @@ public class WxCpDefaultConfigImpl implements WxCpConfigStorage, Serializable {
     return this.aesKey;
   }
 
-  public void setAesKey(String aesKey) {
-    this.aesKey = aesKey;
-  }
-
   @Override
   public Integer getAgentId() {
     return this.agentId;
-  }
-
-  public void setAgentId(Integer agentId) {
-    this.agentId = agentId;
   }
 
   @Override

@@ -38,9 +38,12 @@ public class WxMpStorageAutoConfiguration {
   }
 
   private WxMpDefaultConfigImpl getWxMpInMemoryConfigStorage() {
-    WxMpDefaultConfigImpl config = new WxMpDefaultConfigImpl();
-    setWxMpInfo(config);
-    return config;
+    return new WxMpDefaultConfigImpl(
+      properties.getAppId(),
+      properties.getSecret(),
+      properties.getToken(),
+      properties.getAesKey()
+    );
   }
 
   private WxMpRedisConfigImpl getWxMpInRedisConfigStorage() {
@@ -54,18 +57,15 @@ public class WxMpStorageAutoConfiguration {
       if (pool == null) {
         pool = getJedisPool();
       }
-      WxMpRedisConfigImpl config = new WxMpRedisConfigImpl(pool);
-      setWxMpInfo(config);
-      return config;
+      return new WxMpRedisConfigImpl(
+        pool,
+        properties.getAppId(),
+        properties.getSecret(),
+        properties.getToken(),
+        properties.getAesKey()
+      );
     }
     throw new UnsupportedOperationException();
-  }
-
-  private void setWxMpInfo(WxMpDefaultConfigImpl config) {
-    config.setAppId(properties.getAppId());
-    config.setSecret(properties.getSecret());
-    config.setToken(properties.getToken());
-    config.setAesKey(properties.getAesKey());
   }
 
   private JedisPool getJedisPool() {

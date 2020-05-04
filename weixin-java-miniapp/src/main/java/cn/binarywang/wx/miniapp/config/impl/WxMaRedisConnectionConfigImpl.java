@@ -8,7 +8,9 @@ import redis.clients.jedis.Jedis;
  * <pre>
  * 需要引入依赖<a href="https://github.com/abelaska/jedis-lock">jedis-lock</a>，才能使用该类。
  * </pre>
+ * @deprecated 分布式锁实现库已不再维护，建议使用 <code>WxMaRedissonConfig</code>
  */
+@Deprecated
 public class WxMaRedisConnectionConfigImpl extends AbstractWxMaRedisConfig {
 
   public WxMaRedisConnectionConfigImpl(Jedis jedis) {

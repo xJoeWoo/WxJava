@@ -1,17 +1,18 @@
 package me.chanjar.weixin.mp.config.impl;
 
+import lombok.Data;
+import me.chanjar.weixin.common.bean.WxAccessToken;
+import me.chanjar.weixin.common.util.ConfigUtils;
+import me.chanjar.weixin.common.util.http.apache.ApacheHttpClientBuilder;
+import me.chanjar.weixin.mp.bean.WxMpHostConfig;
+import me.chanjar.weixin.mp.config.WxMpConfigStorage;
+import me.chanjar.weixin.mp.enums.TicketType;
+import me.chanjar.weixin.mp.util.json.WxMpGsonBuilder;
+
 import java.io.File;
 import java.io.Serializable;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
-
-import lombok.Data;
-import me.chanjar.weixin.common.bean.WxAccessToken;
-import me.chanjar.weixin.common.util.http.apache.ApacheHttpClientBuilder;
-import me.chanjar.weixin.mp.config.WxMpConfigStorage;
-import me.chanjar.weixin.mp.bean.WxMpHostConfig;
-import me.chanjar.weixin.mp.enums.TicketType;
-import me.chanjar.weixin.mp.util.json.WxMpGsonBuilder;
 
 /**
  * 基于内存的微信配置provider，在实际生产环境中应该将这些配置持久化.
@@ -22,12 +23,12 @@ import me.chanjar.weixin.mp.util.json.WxMpGsonBuilder;
 public class WxMpDefaultConfigImpl implements WxMpConfigStorage, Serializable {
   private static final long serialVersionUID = -6646519023303395185L;
 
-  protected volatile String appId;
-  protected volatile String secret;
-  protected volatile String token;
+  protected final String appId;
+  protected final String secret;
+  protected final String token;
   protected volatile String templateId;
   protected volatile String accessToken;
-  protected volatile String aesKey;
+  protected final String aesKey;
   protected volatile long expiresTime;
 
   protected volatile String oauth2redirectUri;
@@ -55,6 +56,13 @@ public class WxMpDefaultConfigImpl implements WxMpConfigStorage, Serializable {
 
   protected volatile ApacheHttpClientBuilder apacheHttpClientBuilder;
 
+  public WxMpDefaultConfigImpl(String appId, String secret, String token, String aesKey) {
+    this.appId = appId;
+    this.secret = secret;
+    this.token = token;
+    this.aesKey = aesKey;
+  }
+
   @Override
   public boolean isAccessTokenExpired() {
     return System.currentTimeMillis() > this.expiresTime;
@@ -80,11 +88,11 @@ public class WxMpDefaultConfigImpl implements WxMpConfigStorage, Serializable {
   public String getTicket(TicketType type) {
     switch (type) {
       case SDK:
-        return this.sdkTicket;
+        return getSdkTicket();
       case JSAPI:
-        return this.jsapiTicket;
+        return getJsapiTicket();
       case WX_CARD:
-        return this.cardApiTicket;
+        return getCardApiTicket();
       default:
         return null;
     }
@@ -93,13 +101,13 @@ public class WxMpDefaultConfigImpl implements WxMpConfigStorage, Serializable {
   public void setTicket(TicketType type, String ticket) {
     switch (type) {
       case JSAPI:
-        this.jsapiTicket = ticket;
+        setJsapiTicket(ticket);
         break;
       case WX_CARD:
-        this.cardApiTicket = ticket;
+        setCardApiTicket(ticket);
         break;
       case SDK:
-        this.sdkTicket = ticket;
+        setSdkTicket(ticket);
         break;
       default:
     }
@@ -109,11 +117,11 @@ public class WxMpDefaultConfigImpl implements WxMpConfigStorage, Serializable {
   public Lock getTicketLock(TicketType type) {
     switch (type) {
       case SDK:
-        return this.sdkTicketLock;
+        return getSdkTicketLock();
       case JSAPI:
-        return this.jsapiTicketLock;
+        return getJsapiTicketLock();
       case WX_CARD:
-        return this.cardApiTicketLock;
+        return getCardApiTicketLock();
       default:
         return null;
     }
@@ -121,35 +129,35 @@ public class WxMpDefaultConfigImpl implements WxMpConfigStorage, Serializable {
 
   @Override
   public boolean isTicketExpired(TicketType type) {
+    long expiresTime;
     switch (type) {
       case SDK:
-        return System.currentTimeMillis() > this.sdkTicketExpiresTime;
+        expiresTime = getSdkTicketExpiresTime();
+        break;
       case JSAPI:
-        return System.currentTimeMillis() > this.jsapiTicketExpiresTime;
+        expiresTime = getJsapiTicketExpiresTime();
+        break;
       case WX_CARD:
-        return System.currentTimeMillis() > this.cardApiTicketExpiresTime;
+        expiresTime = getCardApiTicketExpiresTime();
+        break;
       default:
         return false;
     }
+    return ConfigUtils.isExpired(expiresTime);
   }
 
   @Override
   public synchronized void updateTicket(TicketType type, String ticket, int expiresInSeconds) {
+    setTicket(type, ticket);
     switch (type) {
       case JSAPI:
-        this.jsapiTicket = ticket;
-        // 预留200秒的时间
-        this.jsapiTicketExpiresTime = System.currentTimeMillis() + (expiresInSeconds - 200) * 1000L;
+        setJsapiTicketExpiresTime(ConfigUtils.expiresTimestamp(expiresInSeconds));
         break;
       case WX_CARD:
-        this.cardApiTicket = ticket;
-        // 预留200秒的时间
-        this.cardApiTicketExpiresTime = System.currentTimeMillis() + (expiresInSeconds - 200) * 1000L;
+        setCardApiTicketExpiresTime(ConfigUtils.expiresTimestamp(expiresInSeconds));
         break;
       case SDK:
-        this.sdkTicket = ticket;
-        // 预留200秒的时间
-        this.sdkTicketExpiresTime = System.currentTimeMillis() + (expiresInSeconds - 200) * 1000L;
+        setSdkTicketExpiresTime(ConfigUtils.expiresTimestamp(expiresInSeconds));
         break;
       default:
     }
@@ -159,13 +167,13 @@ public class WxMpDefaultConfigImpl implements WxMpConfigStorage, Serializable {
   public void expireTicket(TicketType type) {
     switch (type) {
       case JSAPI:
-        this.jsapiTicketExpiresTime = 0;
+        setJsapiTicketExpiresTime(0);
         break;
       case WX_CARD:
-        this.cardApiTicketExpiresTime = 0;
+        setCardApiTicketExpiresTime(0);
         break;
       case SDK:
-        this.sdkTicketExpiresTime = 0;
+        setSdkTicketExpiresTime(0);
         break;
       default:
     }
